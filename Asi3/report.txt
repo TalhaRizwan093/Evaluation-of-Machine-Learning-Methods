@@ -1,0 +1,43 @@
+Analysis Report for the Exercise
+
+1. Why did the cross-validation described in the letter fail? What is the correct way to do cross-validation here?
+The original pair-level leave-one-out cross-validation failed because it leaves out only one row (one pair) at a time, while rows containing the same drug and/or the same protein are still present in training. That creates information leakage at the entity level and gives an overly optimistic estimate.
+
+Based on the teacher feedback and the deployment scenario, the correct target validation here is Type D: unseen drug and unseen target (protein) at the same time. In Type D, we split drug IDs and protein IDs into disjoint train/test sets, train only on train-drug x train-protein pairs, and evaluate on test-drug x test-protein pairs. This matches the colleague scenario much better, because both sides are unseen from the model perspective.
+
+2. Which parts of the task was AI able to code correctly and which not? Focus particularly on the core of the cross-validation.
+AI coded many technical parts correctly from the beginning: loading files, implementing KNN regression with K=10, creating C-index, and producing plots. The initial weakness was in the cross-validation core: it used pair-level leave-one-out, which is not the right estimate for unseen-entity deployment.
+
+After iteration, AI-generated code was improved to entity-aware validation (LODO/LOPO) and then further revised to Type D, which is the correct requirement for this resubmission. So the main correction was not the model itself, but the validation protocol used to estimate generalization.
+
+3. Which parts of the AI-generated code did you use in your implementation? Why? Explain why the selected pieces of code work correctly in your implementation.
+I used AI-generated code as the implementation base and then validated/adapted it to the assignment requirement. The reused and corrected components include:
+- data loading for input.data, output.data, and pairs.data,
+- the KNN + StandardScaler pipeline,
+- the C-index function,
+- validation functions (LODO, LOPO, and especially Type D),
+- repeated Type D evaluation and visualizations.
+
+These pieces work correctly because the final Type D logic enforces separation of both drugs and proteins between train and test. This is the key condition needed for estimating performance in the client's unseen drug-unseen target use case.
+
+4. What results did you get with your implementation? Report the estimates and interpret the results in terms of how well the model will work in the situations described in the letter. Explain in detail why your cross-validation is the correct way to estimate the generalization performance.
+The notebook outputs gave the following estimates:
+- Pair-level LOOCV C-index: 0.8293
+- LODO C-index: 0.5108
+- LOPO C-index: 0.8287
+- Type D repeated results (5 runs):
+	- Iteration 1: 0.6320
+	- Iteration 2: 0.6071
+	- Iteration 3: 0.6250
+	- Iteration 4: 0.3464
+	- Iteration 5: 0.6677
+	- Average: 0.5757 +- 0.1163
+	- Min/Max: 0.3464 / 0.6677
+
+Interpretation:
+The pair-level and LOPO scores are high, but they do not reflect the hardest deployment condition where both entities are unseen. LODO is near random (about 0.51), showing weak generalization to unseen drugs. Type D average performance is clearly lower than LOPO and has high variability across repeats, which indicates unstable ranking quality when both drug and protein are unseen.
+
+Therefore, for the exact colleague scenario in the letter (new proteins and new drugs), Type D is the most appropriate estimate, and it suggests the current model is not reliable enough for high-confidence prioritization without further improvements.
+
+
+
